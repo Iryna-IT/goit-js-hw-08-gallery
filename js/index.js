@@ -54,34 +54,32 @@ const overlayRef = document.querySelector(".lightbox__overlay");
 
 
 // 1. Создание и рендер разметки по массиву данных и предоставленному шаблону.
-galleryList.insertAdjacentHTML('beforeEnd', galleryItems.map(({ original, preview, description }) =>
+galleryList.insertAdjacentHTML('beforeEnd', galleryItems.map(({ original, preview, description }, index) =>
 `<li class="gallery__item">
     <a class="gallery__link" href = "${original}">
     <img class="gallery__image"
       src="${preview}"
       data-source="${original}"
-      data-index=""
+      data-index="${index}"
       alt="${description}"
-    />
+    >
   </a>
 </li>`).join(""));
 
-// 2. Реализация делегирования на галерее ul.js-gallery и получение url большого изображения.
-galleryList.addEventListener('click', handlegalleryListClick);
 
-function handlegalleryListClick(event) {
+// 2. Реализация делегирования на галерее ul.js-gallery и получение url большого изображения.
+galleryList.addEventListener('click', handleGalleryListClick);
+
+function handleGalleryListClick(event) {
     event.preventDefault();
-    const target = event.target;
-    
-    if (target.nodeName !== "IMG") {
+
+    if (event.target.nodeName !== "IMG") {
         return
     };
 
-    const url = target.dataset.source;
-
-    changeUrl(url);
+    addNewSrc(event);
     
-    openModal(target);
+    openModal(event.target);
 };
 
 // 3. Открытие модального окна по клику на элементе галереи.
@@ -90,22 +88,31 @@ function openModal() {
 };
 
 // 4. Подмена значения атрибута src элемента img.lightbox__image.
-function changeUrl(url) {
-    lightboxImageRef.src = url;
+function addNewSrc(event) {
+    lightboxImageRef.src = event.target.dataset.source;
+    lightboxImageRef.setAttribute('data-index', `${event.target.dataset.index}`);
+    lightboxImageRef.setAttribute('alt', `${event.target.alt}`);
 }
 
 // 5. Закрытие модального окна по клику на кнопку button[data-action="close-lightbox"].
-// 6. Очистка значения атрибута src элемента img.lightbox__image.
 closeModalBtnRef.addEventListener('click', closeModalBtn);
 
-function closeModalBtn(event) {
+function closeModalBtn() {
     lightboxRef.classList.remove("is-open");
-    changeUrl("");
-    window.removeEventListener('keydown', handleKeydownWindow);
+    cleanSrc();
+}
+// 6. Очистка значения атрибута src элемента img.lightbox__image.
+function cleanSrc() {
+    lightboxImageRef.src = "#";
+    lightboxImageRef.removeAttribute('data-index');
+    lightboxImageRef.removeAttribute('alt');
 }
 
 // Закрытие модального окна по клику на div.lightbox__overlay.
-overlayRef.addEventListener('click', event => {
+overlayRef.addEventListener('click',
+    event => {
+    console.log(event.target);
+    console.log(event.currentTarget);
     if (event.target === event.currentTarget) {
         closeModalBtn();
     }
@@ -114,42 +121,36 @@ overlayRef.addEventListener('click', event => {
 // Закрытие модального окна по нажатию клавиши ESC.
 // Пролистывание изображений галереи в открытом модальном окне клавишами "влево" и "вправо".
 window.addEventListener('keydown', handleKeydownWindow);
+
 function handleKeydownWindow(event) {
     if (event.code === "Escape") {
         closeModalBtn();
-        window.removeEventListener('keydown', handleKeydownWindow);
     };
+    swipeImgByArrowKey(event);
+};
+
+function swipeImgByArrowKey(event) {
+    let activeImgIndex = Number(lightboxImageRef.dataset.index);
+    const arrImgRef = document.querySelectorAll('.gallery__image');
+
     if (lightboxRef.classList.contains("is-open")) {
-        if (event.code === "ArrowRight") {
-            // swipeRight(event);
-            console.log("ArrowRight");
-        };
-        if (event.code === "ArrowLeft") {
-            console.log("ArrowLeft");
-        };
+        switch (event.code) {
+            case 'ArrowRight':
+                if (activeImgIndex === arrImgRef.length - 1) { activeImgIndex = -1; };
+                lightboxImageRef.src = arrImgRef[activeImgIndex + 1].dataset.source;
+        lightboxImageRef.dataset.index = arrImgRef[activeImgIndex + 1].dataset.index;
+        lightboxImageRef.alt = arrImgRef[activeImgIndex + 1].alt;
+                break;
+
+            case 'ArrowLeft':
+                if (activeImgIndex === 0) {
+                    activeImgIndex = arrImgRef.length;
+                };
+                lightboxImageRef.src = arrImgRef[activeImgIndex - 1].dataset.source;
+        lightboxImageRef.dataset.index = arrImgRef[activeImgIndex - 1].dataset.index;
+        lightboxImageRef.alt = arrImgRef[activeImgIndex - 1].alt;
+                break;
+            default:
+        }
     };
-}
-
-
-
-// function swipeRight(event) {
-//     let currentSrc = event.target.firstElementChild.dataset.source;
-//     const arrImgRef = galleryList.querySelectorAll('.gallery__image');
-//     console.log(currentSrc);
-//     let index = 0;
-//         for (let i = 0; i <= arrImgRef.length; i += 1) {
-            
-//             if (arrImgRef[i].dataset.source === currentSrc) {
-//                 console.log(true);
-//                 index = i+1;
-//                 currentSrc = arrImgRef[i + 1].dataset.source;
-//                 console.log(index);
-//                 console.log(arrImgRef[i + 1].dataset.source);
-            
-//             };
-//             changeUrl(arrImgRef[`${index}`].dataset.source);
-//             window.removeEventListener('keydown', handleKeydownWindow);
-//         };
-//     }
-
-
+};
